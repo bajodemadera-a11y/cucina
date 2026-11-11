@@ -10,11 +10,34 @@ const base=[
 {id:'paola3',category:'dolce',name:'Torta di Paola 3.0',status:'Ricetta trascritta',description:'Mela, banana, avena e cioccolato',cookedWeight:null,ingredients:[ing("Farina d’avena integrale",200),ing('Farina 00',80),ing('Milk Pro al cioccolato',200),ing('Yogurt greco Delta 0%',150),ing('Uova intere',3,'pz'),ing('Mela matura',250),ing('Banana matura',150),ing('Cacao amaro Selex',35),ing('Zucchero',45),ing('Burro',20),ing('Lievito vanigliato per dolci',16),ing('Rum',15),ing('Sale',null,'q.b.')],steps:'1. Schiacciare la banana e grattugiare la mela.\n2. Sbattere leggermente le uova.\n3. Aggiungere Milk Pro, yogurt, banana, mela, zucchero, rum e burro fuso tiepido.\n4. Mescolare a parte farine, cacao, lievito e sale.\n5. Incorporare gli ingredienti secchi.\n\nLa temperatura e il tempo di cottura non sono stati verificati in questa trascrizione.'},
 {id:'banana',category:'dolce',name:'Banana bread',status:'Da verificare',description:'Versione grande preparata a ottobre 2026; mela variabile 250–300 g',cookedWeight:1530,ingredients:[ing('Banana',250),ing('Mela a pezzetti',null),ing("Farina d’avena",300),ing('Whey Bulk',60),ing('Yogurt greco',380),ing('Uova intere',4,'pz'),ing('Burro',40),ing('Cacao amaro',60),ing('Zucchero',55),ing('Lievito per dolci',20),ing('Cannella',null,'q.b.')],steps:'Preriscaldare il forno statico a 175 °C. Cottura indicativa 50–60 minuti; controllare con lo stecchino dopo 50 minuti.\n\nNota: la quantità finale di mela (250 o 300 g) non è confermata. Peso cotto registrato: 1530 g.'},
 {id:'burger',category:'salato',name:'Hamburger di ceci e soia',status:'Da completare',description:'Versione proteica; il peso finale registrato era 2050 g crudi',cookedWeight:null,rawWeight:2050,ingredients:[ing('Ceci cotti e scolati',1200),ing('Soia',300),ing('Farina 0 aggiuntiva',20)],steps:'Ricetta da completare: i tre ingredienti riportati sono quelli recuperati con certezza, ma potrebbero mancare altri ingredienti.\n\nGli hamburger venivano preparati per essere congelati.'},
-{id:'pane',category:'salato',name:'Pane integrale con semi',status:'Da completare',description:'Preparato nello stampo 11 × 30 × 7 cm',cookedWeight:850,ingredients:[],steps:'Peso finale registrato: 850 g.\nStampo utilizzato: 11 × 30 × 7 cm.\n\nLista ingredienti e dosi da recuperare prima di considerare completa la ricetta.'}
+{id:'pane',category:'salato',name:'Pane integrale con semi',status:'Ingredienti recuperati',description:'Preparato nello stampo 11 × 30 × 7 cm',cookedWeight:850,ingredients:[ing('Farina integrale',335),ing('Farina d’avena',165),ing('Mix di semi',30),ing('Semi di chia',20),ing('Lievito secco',7),ing('Sale',10),ing('Acqua',400)],steps:'Ingredienti recuperati dalla ricetta precedente. Acqua indicata come intervallo 400–430 g: qui è registrato il minimo 400 g, modificabile.\n\nStampo 11 × 30 × 7 cm. Peso finale cotto registrato: 850 g. Tempi di cottura da verificare.'}
 ];
 function clone(v){return JSON.parse(JSON.stringify(v))}
-function load(){try{const x=JSON.parse(localStorage.getItem(KEY));if(Array.isArray(x))return x;}catch(e){}return clone(base)}
-let recipes=load(), category='dolce', selected=null, query='', scaledTarget=null;
+function load(){
+ try{
+  const x=JSON.parse(localStorage.getItem(KEY));
+  if(Array.isArray(x)){
+   for(const b of base){
+    const r=x.find(v=>v.id===b.id);
+    if(!r){x.push(clone(b));continue}
+    // Migra soltanto le ricette preinstallate rimaste incomplete;
+    // non cancellare note, preparazioni modificate o ingredienti personali.
+    if(b.id==='pane' && Array.isArray(r.ingredients) && r.ingredients.length===0){
+     r.ingredients=clone(b.ingredients);
+     if((r.steps||'').includes('Lista ingredienti e dosi da recuperare'))r.steps=b.steps;
+     r.status=b.status;
+    }
+    if(b.id==='burger' && Array.isArray(r.ingredients) && r.ingredients.length===3){
+     const old=r.ingredients.find(v=>v.name==='Farina aggiunta in seguito');
+     if(old && Number(old.qty)===20){old.name='Farina 0 aggiuntiva';}
+    }
+   }
+   return x;
+  }
+ }catch(e){}
+ return clone(base);
+}
+let recipes=load(), category='dolce', selected=null, query='', scaledTarget=null;\ntry{localStorage.setItem(KEY,JSON.stringify(recipes))}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(recipes));}catch(e){alert('Salvataggio sul dispositivo non riuscito: esporta un backup.')}}
 function esc(s){return String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')}
 function fnum(n){return Number.isFinite(Number(n))?Number(n).toLocaleString('it-IT',{maximumFractionDigits:2}):'—'}
