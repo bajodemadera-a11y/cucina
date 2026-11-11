@@ -27,6 +27,11 @@ function load(){
      if((r.steps||'').includes('Lista ingredienti e dosi da recuperare'))r.steps=b.steps;
      r.status=b.status;
     }
+    if(b.id==='burger' && Array.isArray(r.ingredients)){
+     const baseFlour=r.ingredients.find(v=>v.name==='Farina 0' && Number(v.qty)===40);
+     const extraFlour=r.ingredients.find(v=>['Farina 0 aggiunta','Farina 0 aggiuntiva','Farina aggiunta in seguito'].includes(v.name) && Number(v.qty)===20);
+     if(baseFlour && extraFlour){baseFlour.qty=60;r.ingredients=r.ingredients.filter(v=>v!==extraFlour);}
+    }
     if(b.id==='burger' && Array.isArray(r.ingredients) && r.ingredients.length===3){
      const old=r.ingredients.find(v=>v.name==='Farina aggiunta in seguito');
      if(old && Number(old.qty)===20){old.name='Farina 0 aggiuntiva';}
