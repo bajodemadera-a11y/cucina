@@ -50,7 +50,8 @@ function load(){
  }catch(e){}
  return clone(base);
 }
-let recipes=load(), category='dolce', selected=null, query='', scaledTarget=null;
+let recipes=load(), category='dolce', selected=null, query='', scaledTarget=null, portionGrams=100;
+applyReferenceNutrition(recipes);
 try{localStorage.setItem(KEY,JSON.stringify(recipes))}catch(e){}
 function refreshBundledRecipes(){
  const ids=['pane','burger','banana','paola3'];
@@ -63,7 +64,7 @@ function refreshBundledRecipes(){
   const old=recipes[index];
   recipes[index]={...clone(fresh),notes:old.notes||'',cookedWeight:old.cookedWeight??fresh.cookedWeight,rawWeight:old.rawWeight??fresh.rawWeight};
  }
- save();scaledTarget=null;render();alert('Ricette iniziali aggiornate. Le note sono state mantenute.');
+ applyReferenceNutrition(recipes);save();scaledTarget=null;render();alert('Ricette iniziali aggiornate. Le note sono state mantenute.');
 }
 function save(){try{localStorage.setItem(KEY,JSON.stringify(recipes));}catch(e){alert('Salvataggio sul dispositivo non riuscito: esporta un backup.')}}
 function esc(s){return String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')}
@@ -72,10 +73,106 @@ function qtxt(i){return i.qty===null||i.qty===''?'Da inserire':fnum(i.qty)+' '+e
 function getRecipe(){return recipes.find(r=>r.id===selected)}
 function header(){return `<header class="top"><div class="brand"><div class="logo">♨</div><div><h1>Cucina</h1><div class="subtitle">Il mio ricettario</div></div></div><div class="top-actions"><button class="btn" data-act="refreshBase">↻ Aggiorna ricette</button><button class="btn" data-act="export">↓ Backup</button><button class="btn" data-act="import">↑ Importa</button></div></header>`}
 function home(){const group=recipes.filter(r=>r.category===category&&r.name.toLowerCase().includes(query.toLowerCase()));return `${header()}<section class="intro"><h2>Le mie ricette</h2><p>Ingredienti e quantità modificabili. Le modifiche vengono salvate su questo dispositivo.</p></section><div class="categories"><button class="cat ${category==='dolce'?'active':''}" data-act="category" data-category="dolce"><span class="emoji">🍰</span><span><strong>Dolce</strong><small>${recipes.filter(r=>r.category==='dolce').length} ricette</small></span></button><button class="cat ${category==='salato'?'active':''}" data-act="category" data-category="salato"><span class="emoji">🥘</span><span><strong>Salato</strong><small>${recipes.filter(r=>r.category==='salato').length} ricette</small></span></button></div><div class="control"><h3>${category==='dolce'?'Dolci':'Salati'}</h3><input class="search" id="search" aria-label="Cerca ricette" placeholder="Cerca ricetta…" value="${esc(query)}"></div><section class="recipes">${group.map(r=>`<article class="recipe"><span class="chip">${esc(r.status||'Ricetta')}</span><h4>${esc(r.name)}</h4><p>${esc(r.description||'')}</p><div class="bottom"><span class="muted">${r.ingredients.length} ingredienti</span><button class="btn primary" data-act="open" data-id="${esc(r.id)}">Apri ricetta</button></div></article>`).join('')||'<div class="empty">Nessuna ricetta trovata.</div>'}</section><div class="section-actions"><button class="btn primary" data-act="new">+ Nuova ricetta</button></div>`}
-function nutrition(r){if(!r.ingredients.length||r.ingredients.some(i=>i.qty===null||i.qty===''||i.unit!=='g'||!i.nutrition||nutrientKeys.some(([k])=>!Number.isFinite(Number(i.nutrition[k]))))){return `<p class="muted">Calcolo non disponibile: per ottenere valori affidabili servono le quantità in grammi e i sei valori nutrizionali per 100 g di <strong>ogni</strong> ingrediente. Puoi inserirli premendo Modifica. Le uova a pezzi vanno convertite in grammi edibili.</p>`}
-const totals=Object.fromEntries(nutrientKeys.map(([k])=>[k,r.ingredients.reduce((s,i)=>s+Number(i.qty)*Number(i.nutrition[k])/100,0)]));const per100=r.cookedWeight>0?Object.fromEntries(nutrientKeys.map(([k])=>[k,totals[k]*100/Number(r.cookedWeight)])):null;
-const block=(vals,title)=>`<h4>${title}</h4><div class="nutrition">${nutrientKeys.map(([k,label])=>`<div><strong>${fnum(vals[k])}</strong><small>${label}</small></div>`).join('')}</div>`;
-return block(totals,'Totale ricetta')+(per100?block(per100,'Per 100 g dopo la cottura'):'<p class="muted">Inserisci il peso finale per visualizzare i valori per 100 g.</p>')}
+
+const NUTRITION_REFERENCE={
+ // Valori per 100 g. null = valore non riscontrato nella fonte, non zero.
+ oat:{n:[378,12.6,66.3,7.1,1.46,7.6],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000200',label:'CREA farina d’avena',kind:'generico'},
+ whole:{n:[313,11.9,61.8,1.9,null,8.4],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000240',label:'CREA farina integrale',kind:'generico'},
+ flour0:{n:[321,11.5,69.5,1,null,2.9],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000230',label:'CREA farina tipo 0',kind:'generico'},
+ flour00:{n:[323,11,71.6,0.7,null,2.2],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000220',label:'CREA farina tipo 00',kind:'generico'},
+ chickpeas:{n:[132,7,18.9,2.4,null,5.8],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/004005',label:'CREA ceci bolliti scolati',kind:'generico'},
+ soy:{n:[322,49.9,9,4.4,0.6,23.5],source:'https://datafood.ch/it/alimento/soia-testurizzata-sminuzzata-granulata-secca/',label:'Banca dati svizzera, soia testurizzata',kind:'generico'},
+ greek:{n:[57,9.6,3.8,0.1,0,0],source:'https://spesaonline.esselunga.it/commerce/nav/supermercato/store/prodotto/310413/delta-yogurt-greco-autentico-0-di-grassi-bianco-4-x-150-g',label:'Etichetta Delta 0%',kind:'etichetta'},
+ whey:{n:[378,71,15,3.5,1.9,1.4],source:'https://www.bulk.com/it/products/proteine-del-siero-del-latte-it/bpb-wpc8-0000',label:'Riferimento Bulk Pure Whey (gusto da verificare)',kind:'riferimento'},
+ chia:{n:[482,21.4,1.8,34.1,3.1,40.9],source:'https://impuls.migros.ch/it/alimentazione/conoscenze-sull-alimentazione/semi-di-chia',label:'Banca dati svizzera, semi di chia',kind:'generico'},
+ banana:{n:[76,1.2,17.4,0.3,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/007510',label:'CREA banana fresca',kind:'generico'},
+ apple:{n:[44,0.2,null,null,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/007120',label:'CREA mela con buccia',kind:'generico'},
+ egg:{n:[128,12.4,null,8.7,null,0],source:'https://alimentinutrizione.it/tabelle-nutrizionali/181100',label:'CREA uovo intero (50 g edibili per uovo)',kind:'generico'},
+ white:{n:[43,10.7,null,null,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/182010',label:'CREA albume',kind:'generico'},
+ butter:{n:[758,0.8,1.1,83.4,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/190010',label:'CREA burro',kind:'generico'},
+ cocoa:{n:[355,20.4,11.5,25.6,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/508010',label:'CREA cacao amaro (non etichetta Selex)',kind:'generico'},
+ sugar:{n:[392,0,100,0,0,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/201500',label:'CREA zucchero',kind:'generico'},
+ starch:{n:[328,0.3,null,null,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000300',label:'CREA amido di mais',kind:'generico'},
+ olive:{n:[899,0,0,99.9,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/009210',label:'CREA olio extravergine (tipo olio da confermare)',kind:'riferimento'},
+ water:{n:[0,0,0,0,0,0],source:'',label:'Acqua',kind:'composizione'},
+ salt:{n:[0,0,0,0,0,0],source:'',label:'Sale',kind:'composizione'}
+};
+function nutritionReference(name){
+ const n=String(name).toLowerCase();
+ let key=null;
+ if(n.includes('yogurt greco delta'))key='greek';
+ else if(n.includes('yogurt greco'))key='greek';
+ else if(n.includes('whey bulk'))key='whey';
+ else if(n.includes('soia secca')||n.includes('soia testurizzata'))key='soy';
+ else if(n.includes('farina d’avena')||n.includes("farina d'avena"))key='oat';
+ else if(n.includes('farina integrale'))key='whole';
+ else if(n.includes('farina 00'))key='flour00';
+ else if(n.includes('farina 0'))key='flour0';
+ else if(n.includes('ceci cotti'))key='chickpeas';
+ else if(n.includes('semi di chia'))key='chia';
+ else if(n.includes('banana'))key='banana';
+ else if(n.includes('mela'))key='apple';
+ else if(n.includes('albume'))key='white';
+ else if(n.includes('uova'))key='egg';
+ else if(n.includes('burro'))key='butter';
+ else if(n.includes('cacao'))key='cocoa';
+ else if(n.includes('zucchero'))key='sugar';
+ else if(n.includes('amido di mais'))key='starch';
+ else if(n.includes('olio'))key='olive';
+ else if(n==='acqua')key='water';
+ else if(n==='sale')key='salt';
+ if(!key)return null;
+ const d=NUTRITION_REFERENCE[key];
+ return {nutrition:Object.fromEntries(nutrientKeys.map(([k],i)=>[k,d.n[i]])),source:d.source,label:d.label,kind:d.kind};
+}
+function applyReferenceNutrition(rs){
+ let changed=false;
+ for(const r of rs)for(const i of (r.ingredients||[])){
+   if(i.nutrition)continue; // mai sovrascrivere valori messi dall'utente
+   const ref=nutritionReference(i.name);
+   if(ref){i.nutrition=ref.nutrition;i.nutritionSource=ref.source;i.nutritionLabel=ref.label;i.nutritionKind=ref.kind;changed=true}
+ }
+ return changed;
+}
+function gramsForNutrition(i){
+ if(i.qty===null||i.qty===''||!Number.isFinite(Number(i.qty)))return null;
+ if(i.unit==='g')return Number(i.qty);
+ if(i.unit==='pz' && /uova/i.test(i.name))return Number(i.qty)*50;
+ return null;
+}
+function nutrition(r){
+ const factor=Number.isFinite(scaledTarget)&&scaledTarget>0&&Number(r.cookedWeight)>0?scaledTarget/Number(r.cookedWeight):1;
+ const weights=r.ingredients.map(i=>gramsForNutrition(i));
+ const unknown=new Set();
+ const totals={}; const complete={};
+ for(const [key] of nutrientKeys){
+   totals[key]=0;complete[key]=true;
+   for(let j=0;j<r.ingredients.length;j++){
+     const i=r.ingredients[j],mass=weights[j],v=i.nutrition?.[key];
+     if(i.qty===0)continue;
+     if(i.qty===null && i.unit==='q.b.')continue; // ingrediente q.b. escluso e segnalato
+     if(mass===null||v===null||v===undefined||v===''||!Number.isFinite(Number(v))){
+       complete[key]=false;unknown.add(i.name);continue;
+     }
+     totals[key]+=mass*Number(v)/100*factor;
+   }
+ }
+ const cooked=Number(r.cookedWeight)>0?(scaledTarget>0?scaledTarget:Number(r.cookedWeight)):null;
+ const portion=Number.isFinite(portionGrams)&&portionGrams>0?portionGrams:100;
+ const blocks=[['Totale ingredienti',1]];
+ if(cooked){blocks.push(['Per 100 g '+(scaledTarget>0?'adattati':'cotti'),100/cooked]);blocks.push(['Per porzione ('+fnum(portion)+' g)',portion/cooked])}
+ else if(r.rawWeight>0){blocks.push(['Per 100 g crudi (riferimento '+fnum(r.rawWeight)+' g)',100/Number(r.rawWeight)]);blocks.push(['Per porzione cruda ('+fnum(portion)+' g)',portion/Number(r.rawWeight)])}
+ const warning=Array.from(unknown);
+ const exclusions=r.ingredients.filter(i=>i.qty===null&&i.unit==='q.b.').map(i=>i.name);
+ const onlyComplete=nutrientKeys.every(([k])=>complete[k]);
+ return `<p class="note">Valori ricavati dalle quantità degli ingredienti; con ricette cotte la perdita d’acqua è considerata tramite il peso finale. Le uova sono conteggiate come 50 g edibili ciascuna. Le quantità adattate aggiornano anche i totali.</p>
+ <label class="field" style="max-width:190px">Peso porzione in grammi<input id="portionGrams" type="number" min="1" step="any" value="${esc(portion)}"></label>
+ ${blocks.map(([title,coef])=>`<h4 style="margin:16px 0 9px">${esc(title)}${onlyComplete?'':' · dati parziali'}</h4><div class="nutrition">${nutrientKeys.map(([k,label])=>`<div><strong>${complete[k]?fnum(totals[k]*coef):'≥ '+fnum(totals[k]*coef)}</strong><small>${esc(label)}${complete[k]?'':' · minimo noto'}</small></div>`).join('')}</div>`).join('')}
+ ${warning.length?`<p class="note"><strong>Calcolo ancora incompleto:</strong> dati nutrizionali mancanti per ${esc(warning.join(', '))}. I valori marcati ≥ sono soltanto la somma dei contributi noti, non il totale reale.</p>`:''}
+ ${exclusions.length?`<p class="note">Non conteggiati (quantità q.b.): ${esc(exclusions.join(', '))}.</p>`:''}
+ ${r.ingredients.some(i=>i.nutritionKind==='riferimento')?`<p class="note">Alcuni ingredienti utilizzano un prodotto di riferimento: controlla il gusto o la confezione effettivamente usati.</p>`:''}
+ <details><summary style="cursor:pointer;font-weight:700">Fonti dei dati degli ingredienti</summary><div style="margin-top:10px">${r.ingredients.filter(i=>i.nutritionSource).map(i=>`<p class="note">${esc(i.name)}: <a href="${esc(i.nutritionSource)}" target="_blank" rel="noopener noreferrer">${esc(i.nutritionLabel||'Fonte')}</a></p>`).join('')||'<p class="note">Nessuna fonte associata.</p>'}</div></details>`;
+}
 function scalingPanel(r){
  const w=Number(r.cookedWeight);
  if(!(w>0))return `<p class="muted">Per adattare le dosi, registra prima il peso finale cotto della ricetta originale.</p>`;
@@ -85,7 +182,7 @@ function scalingPanel(r){
  ${active?`<div class="number-info"><strong>Dosi visualizzate sopra:</strong> per ${fnum(scaledTarget)} g cotti (originale ${fnum(w)} g; × ${fnum(scaledTarget/w)}). Nessuna modifica alla ricetta salvata.</div><button class="btn" data-act="resetScale">Ripristina originale</button>`:''}
  <p class="note">La resa è una stima proporzionale e può variare in cottura. Per ingredienti senza quantità registrata rimane «Da inserire».</p>`;
 }
-function detail(){const r=getRecipe();if(!r){selected=null;return home()}const scaled=Number.isFinite(scaledTarget)&&scaledTarget>0&&Number(r.cookedWeight)>0;const mult=scaled?scaledTarget/Number(r.cookedWeight):1;return `${header()}<button class="back" data-act="back">← Tutte le ricette</button><div class="detail-header"><div><span class="chip">${r.category==='dolce'?'Dolce':'Salato'} · ${esc(r.status||'Ricetta')}</span><h2>${esc(r.name)}</h2><p>${esc(r.description||'')}</p></div><button class="btn" data-act="meta">Modifica ricetta</button></div><section class="panel" id="ingredientsPanel"><h3>Ingredienti ${scaled?'<span class="chip">Dosi adattate</span>':''}</h3>${scaled?`<div class="number-info">Quantità necessarie per ottenere circa <strong>${fnum(scaledTarget)} g cotti</strong>. Originale salvato: ${fnum(r.cookedWeight)} g. <button class="btn" data-act="resetScale" style="margin-left:8px">Ripristina originale</button></div>`:''}${r.ingredients.map(i=>`<div class="ingredient"><div><strong>${esc(i.name)}</strong>${!i.nutrition?'<small>Valori nutrizionali non inseriti</small>':''}</div><span class="amount">${scaled&&i.qty!==null&&i.qty!==''&&i.unit!=='q.b.'?fnum(Number(i.qty)*mult)+' '+esc(i.unit||'g'):qtxt(i)}</span><button class="textlink" data-act="editIng" data-iid="${esc(i.id)}" ${scaled?'disabled title="Ripristina l’originale per modificare la ricetta"':''}>Modifica</button></div>`).join('')||'<p class="muted">Nessun ingrediente ancora inserito.</p>'}<div class="section-actions"><button class="btn" data-act="addIng" ${scaled?'disabled':''}>+ Ingrediente</button></div></section><section class="panel"><h3>Preparazione</h3><div class="steps">${esc(r.steps||'Preparazione non inserita.')}</div><div class="section-actions"><button class="btn" data-act="steps">Modifica preparazione</button></div></section><section class="panel"><h3>Pesi finali originali</h3><p><strong>Peso dopo cottura:</strong> ${r.cookedWeight>0?fnum(r.cookedWeight)+' g':'non inserito'}</p>${r.rawWeight>0?`<p><strong>Peso crudo:</strong> ${fnum(r.rawWeight)} g</p>`:''}<button class="btn" data-act="weight" ${scaled?'disabled':''}>Modifica pesi</button></section><section class="panel"><h3>Valori nutrizionali della ricetta originale</h3>${nutrition(r)}<p class="note">Si calcolano quando tutti i dati verificati degli ingredienti sono presenti. I valori sopra si riferiscono alla ricetta originale.</p></section><section class="panel"><h3>Le mie note</h3><div class="steps">${r.notes?esc(r.notes):'<span class="muted">Nessuna nota ancora inserita.</span>'}</div><div class="section-actions"><button class="btn" data-act="notes">${r.notes?'Modifica note':'+ Aggiungi nota'}</button></div><p class="note">Le note rimangono associate alla ricetta originale anche quando adatti le quantità.</p></section><section class="panel" id="adaptPanel"><h3>Adatta quantità</h3>${scalingPanel(r)}</section><div class="section-actions"><button class="btn red" data-act="deleteRecipe">Elimina ricetta</button></div>`}
+function detail(){const r=getRecipe();if(!r){selected=null;return home()}const scaled=Number.isFinite(scaledTarget)&&scaledTarget>0&&Number(r.cookedWeight)>0;const mult=scaled?scaledTarget/Number(r.cookedWeight):1;return `${header()}<button class="back" data-act="back">← Tutte le ricette</button><div class="detail-header"><div><span class="chip">${r.category==='dolce'?'Dolce':'Salato'} · ${esc(r.status||'Ricetta')}</span><h2>${esc(r.name)}</h2><p>${esc(r.description||'')}</p></div><button class="btn" data-act="meta">Modifica ricetta</button></div><section class="panel" id="ingredientsPanel"><h3>Ingredienti ${scaled?'<span class="chip">Dosi adattate</span>':''}</h3>${scaled?`<div class="number-info">Quantità necessarie per ottenere circa <strong>${fnum(scaledTarget)} g cotti</strong>. Originale salvato: ${fnum(r.cookedWeight)} g. <button class="btn" data-act="resetScale" style="margin-left:8px">Ripristina originale</button></div>`:''}${r.ingredients.map(i=>`<div class="ingredient"><div><strong>${esc(i.name)}</strong>${!i.nutrition?'<small>Valori nutrizionali non inseriti</small>':''}</div><span class="amount">${scaled&&i.qty!==null&&i.qty!==''&&i.unit!=='q.b.'?fnum(Number(i.qty)*mult)+' '+esc(i.unit||'g'):qtxt(i)}</span><button class="textlink" data-act="editIng" data-iid="${esc(i.id)}" ${scaled?'disabled title="Ripristina l’originale per modificare la ricetta"':''}>Modifica</button></div>`).join('')||'<p class="muted">Nessun ingrediente ancora inserito.</p>'}<div class="section-actions"><button class="btn" data-act="addIng" ${scaled?'disabled':''}>+ Ingrediente</button></div></section><section class="panel"><h3>Preparazione</h3><div class="steps">${esc(r.steps||'Preparazione non inserita.')}</div><div class="section-actions"><button class="btn" data-act="steps">Modifica preparazione</button></div></section><section class="panel"><h3>Pesi finali originali</h3><p><strong>Peso dopo cottura:</strong> ${r.cookedWeight>0?fnum(r.cookedWeight)+' g':'non inserito'}</p>${r.rawWeight>0?`<p><strong>Peso crudo:</strong> ${fnum(r.rawWeight)} g</p>`:''}<button class="btn" data-act="weight" ${scaled?'disabled':''}>Modifica pesi</button></section><section class="panel"><h3>Valori nutrizionali della ricetta</h3>${nutrition(r)}<p class="note">Fonti e dati non confermati sono indicati chiaramente. Per valori esatti usa Modifica ingrediente e i dati della confezione.</p></section><section class="panel"><h3>Le mie note</h3><div class="steps">${r.notes?esc(r.notes):'<span class="muted">Nessuna nota ancora inserita.</span>'}</div><div class="section-actions"><button class="btn" data-act="notes">${r.notes?'Modifica note':'+ Aggiungi nota'}</button></div><p class="note">Le note rimangono associate alla ricetta originale anche quando adatti le quantità.</p></section><section class="panel" id="adaptPanel"><h3>Adatta quantità</h3>${scalingPanel(r)}</section><div class="section-actions"><button class="btn red" data-act="deleteRecipe">Elimina ricetta</button></div>`}
 function render(){document.getElementById('app').innerHTML=selected?detail():home()}
 function modal(title,subtitle,body,onSave){const o=document.createElement('div');o.className='overlay';o.innerHTML=`<div class="modal" role="dialog" aria-modal="true"><h3>${esc(title)}</h3><p class="sub">${esc(subtitle||'')}</p><form id="editForm">${body}<div class="modal-footer"><button class="btn" type="button" id="cancel">Annulla</button><button class="btn primary" type="submit">Salva</button></div></form></div>`;document.body.appendChild(o);o.querySelector('#cancel').onclick=()=>o.remove();o.addEventListener('click',e=>{if(e.target===o)o.remove()});o.querySelector('form').onsubmit=e=>{e.preventDefault();const obj=Object.fromEntries(new FormData(e.currentTarget).entries());if(onSave(obj)!==false){save();o.remove();render()}};return o}
 const field=(name,label,value='',type='text',extra='')=>`<label class="field">${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value??'')}" ${extra}></label>`;
@@ -100,9 +197,10 @@ function editNotes(){const r=getRecipe();modal('Note della ricetta','Annotazioni
 function editWeight(){const r=getRecipe();modal('Pesi della ricetta','Il peso dopo cottura serve per i valori nutrizionali per 100 g.',`<div class="edit-grid">${field('cookedWeight','Peso dopo cottura (g)',r.cookedWeight,'number','min="0" step="any"')}${field('rawWeight','Peso crudo totale (g)',r.rawWeight,'number','min="0" step="any"')}</div>`,o=>{if(['cookedWeight','rawWeight'].some(k=>o[k]!==''&&(!Number.isFinite(num(o[k]))||num(o[k])<0)))return false;r.cookedWeight=num(o.cookedWeight);r.rawWeight=num(o.rawWeight)})}
 function backup(){const b=new Blob([JSON.stringify({app:'Cucina',version:1,exportedAt:new Date().toISOString(),recipes},null,2)],{type:'application/json'});const url=URL.createObjectURL(b),a=document.createElement('a');a.href=url;a.download='cucina-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000)}
 function validImport(x){return x&&x.app==='Cucina'&&Array.isArray(x.recipes)&&x.recipes.length<2000&&x.recipes.every(r=>typeof r.id==='string'&&typeof r.name==='string'&&['dolce','salato'].includes(r.category)&&Array.isArray(r.ingredients)&&r.ingredients.length<200)}
-document.getElementById('importFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!validImport(x)){alert('File backup non valido.');return}if(confirm('Importare il backup? Le ricette attuali su questo dispositivo saranno sostituite.')){recipes=x.recipes;selected=null;category='dolce';save();render()}}catch(err){alert('Impossibile leggere il file JSON.')}finally{e.target.value=''}});
+document.getElementById('importFile').addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const x=JSON.parse(await f.text());if(!validImport(x)){alert('File backup non valido.');return}if(confirm('Importare il backup? Le ricette attuali su questo dispositivo saranno sostituite.')){recipes=x.recipes;applyReferenceNutrition(recipes);selected=null;category='dolce';save();render()}}catch(err){alert('Impossibile leggere il file JSON.')}finally{e.target.value=''}});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b)return;const a=b.dataset.act;if(a==='refreshBase'){refreshBundledRecipes()}else if(a==='category'){category=b.dataset.category;query='';render()}else if(a==='open'){selected=b.dataset.id;scaledTarget=null;render()}else if(a==='back'){selected=null;scaledTarget=null;render()}else if(a==='editIng'){editIngredient(getRecipe().ingredients.find(i=>i.id===b.dataset.iid))}else if(a==='addIng'){editIngredient(null)}else if(a==='new'){editMeta(true)}else if(a==='meta'){editMeta(false)}else if(a==='steps'){editSteps()}else if(a==='notes'){editNotes()}else if(a==='weight'){editWeight()}else if(a==='resetScale'){scaledTarget=null;render()}else if(a==='printScale'){window.print()}else if(a==='deleteRecipe'){if(confirm('Eliminare definitivamente questa ricetta?')){recipes=recipes.filter(r=>r.id!==selected);selected=null;save();render()}}else if(a==='export'){backup()}else if(a==='import'){document.getElementById('importFile').click()}});
 document.addEventListener('submit',e=>{if(e.target.id!=='scaleForm')return;e.preventDefault();const v=Number(new FormData(e.target).get('target'));if(!Number.isFinite(v)||v<=0){alert('Inserisci un peso cotto maggiore di zero.');return}scaledTarget=v;render();document.getElementById('ingredientsPanel')?.scrollIntoView({behavior:'smooth',block:'start'})});
+document.addEventListener('change',e=>{if(e.target.id==='portionGrams'){const v=Number(e.target.value);if(Number.isFinite(v)&&v>0){portionGrams=v;render()}}});
 document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;const pos=e.target.selectionStart;render();const x=document.getElementById('search');x.focus();x.setSelectionRange(pos,pos)}});
 render();if('serviceWorker'in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('./service-worker.js').catch(()=>{})}
 </script></body></html>
