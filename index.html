@@ -167,6 +167,10 @@ function nutrition(r){
  const blocks=[['Totale ingredienti',1]];
  if(cooked){blocks.push(['Per 100 g '+(scaledTarget>0?'adattati':'cotti'),100/cooked]);blocks.push(['Per porzione ('+fnum(portion)+' g)',portion/cooked])}
  else if(r.rawWeight>0){blocks.push(['Per 100 g crudi (riferimento '+fnum(r.rawWeight)+' g)',100/Number(r.rawWeight)]);blocks.push(['Per porzione cruda ('+fnum(portion)+' g)',portion/Number(r.rawWeight)])}
+ else if(weights.every((w,j)=>w!==null || (r.ingredients[j].qty===null&&r.ingredients[j].unit==='q.b.'))){
+  const rawWeight=weights.reduce((sum,w)=>sum+(w||0),0);
+  if(rawWeight>0){blocks.push(['Per 100 g di impasto crudo (peso calcolato)',100/rawWeight]);blocks.push(['Per porzione di impasto crudo ('+fnum(portion)+' g)',portion/rawWeight])}
+ }
  const warning=Array.from(unknown);
  const exclusions=r.ingredients.filter(i=>i.qty===null&&i.unit==='q.b.').map(i=>i.name);
  const onlyComplete=nutrientKeys.every(([k])=>complete[k]);
