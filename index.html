@@ -51,7 +51,6 @@ function load(){
  return clone(base);
 }
 let recipes=load(), category='dolce', selected=null, query='', scaledTarget=null, portionGrams=100;
-applyReferenceNutrition(recipes);
 try{localStorage.setItem(KEY,JSON.stringify(recipes))}catch(e){}
 function refreshBundledRecipes(){
  const ids=['pane','burger','banana','paola3'];
@@ -202,5 +201,5 @@ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(
 document.addEventListener('submit',e=>{if(e.target.id!=='scaleForm')return;e.preventDefault();const v=Number(new FormData(e.target).get('target'));if(!Number.isFinite(v)||v<=0){alert('Inserisci un peso cotto maggiore di zero.');return}scaledTarget=v;render();document.getElementById('ingredientsPanel')?.scrollIntoView({behavior:'smooth',block:'start'})});
 document.addEventListener('change',e=>{if(e.target.id==='portionGrams'){const v=Number(e.target.value);if(Number.isFinite(v)&&v>0){portionGrams=v;render()}}});
 document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;const pos=e.target.selectionStart;render();const x=document.getElementById('search');x.focus();x.setSelectionRange(pos,pos)}});
-render();if('serviceWorker'in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('./service-worker.js').catch(()=>{})}
+applyReferenceNutrition(recipes);save();render();if('serviceWorker'in navigator&&location.protocol!=='file:'){navigator.serviceWorker.register('./service-worker.js').catch(()=>{})}
 </script></body></html>
