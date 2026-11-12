@@ -76,30 +76,32 @@ function home(){const group=recipes.filter(r=>r.category===category&&r.name.toLo
 const NUTRITION_REFERENCE={
  // Valori per 100 g. null = valore non riscontrato nella fonte, non zero.
  oat:{n:[378,12.6,66.3,7.1,1.46,7.6],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000200',label:'CREA farina d’avena',kind:'generico'},
- whole:{n:[313,11.9,61.8,1.9,null,8.4],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000240',label:'CREA farina integrale',kind:'generico'},
- flour0:{n:[321,11.5,69.5,1,null,2.9],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000230',label:'CREA farina tipo 0',kind:'generico'},
+ whole:{n:[338,13.5,61,2,0.3,11],source:'https://datafood.ch/it/alimento/farina-di-frumento-farina-integrale-tipo-1700/',label:'Banca dati svizzera farina integrale',kind:'generico'},
+ flour0:{n:[344,12,69.5,1.3,0.3,3.2],source:'https://datafood.ch/it/alimento/farina-di-frumento-farina-bianca-tipo-550/',label:'Riferimento farina bianca (non identica alla tipo 0)',kind:'generico'},
  flour00:{n:[323,11,71.6,0.7,null,2.2],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000220',label:'CREA farina tipo 00',kind:'generico'},
- chickpeas:{n:[132,7,18.9,2.4,null,5.8],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/004005',label:'CREA ceci bolliti scolati',kind:'generico'},
+ chickpeas:{n:[131,7.3,16.8,2,0.3,8.4],source:'https://datafood.ch/it/alimento/ceci-cotti-senza-aggiunta-di-grassi-e-sale/',label:'Banca dati svizzera ceci cotti',kind:'generico'},
  soy:{n:[322,49.9,9,4.4,0.6,23.5],source:'https://datafood.ch/it/alimento/soia-testurizzata-sminuzzata-granulata-secca/',label:'Banca dati svizzera, soia testurizzata',kind:'generico'},
  greek:{n:[57,9.6,3.8,0.1,0,0],source:'https://spesaonline.esselunga.it/commerce/nav/supermercato/store/prodotto/310413/delta-yogurt-greco-autentico-0-di-grassi-bianco-4-x-150-g',label:'Etichetta Delta 0%',kind:'etichetta'},
+ milkpro:{n:[84,10,7.1,1.5,1,null],source:'https://spesaonline.conad.it/p/milk-pro-high-protein-20g-crema-dessert-al-cacao-200-g--11439171',label:'Milk Pro al cacao, versione 84 kcal (confezione da verificare)',kind:'riferimento'},
  whey:{n:[378,71,15,3.5,1.9,1.4],source:'https://www.bulk.com/it/products/proteine-del-siero-del-latte-it/bpb-wpc8-0000',label:'Riferimento Bulk Pure Whey (gusto da verificare)',kind:'riferimento'},
  chia:{n:[482,21.4,1.8,34.1,3.1,40.9],source:'https://impuls.migros.ch/it/alimentazione/conoscenze-sull-alimentazione/semi-di-chia',label:'Banca dati svizzera, semi di chia',kind:'generico'},
- banana:{n:[76,1.2,17.4,0.3,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/007510',label:'CREA banana fresca',kind:'generico'},
- apple:{n:[44,0.2,null,null,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/007120',label:'CREA mela con buccia',kind:'generico'},
- egg:{n:[128,12.4,null,8.7,null,0],source:'https://alimentinutrizione.it/tabelle-nutrizionali/181100',label:'CREA uovo intero (50 g edibili per uovo)',kind:'generico'},
- white:{n:[43,10.7,null,null,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/182010',label:'CREA albume',kind:'generico'},
+ banana:{n:[90,1.1,19.7,0.2,0.1,2.7],source:'https://datafood.ch/it/alimento/banana-cruda/',label:'Banca dati svizzera banana',kind:'generico'},
+ apple:{n:[52,0.3,11.6,0.3,0.1,1.4],source:'https://datafood.ch/it/alimento/mela-cruda/',label:'Banca dati svizzera mela',kind:'generico'},
+ egg:{n:[140,12.6,0.3,9.8,2.6,0],source:'https://datafood.ch/it/alimento/uovo-di-gallina-intero-crudo/',label:'Banca dati svizzera uovo (50 g edibili)',kind:'generico'},
+ white:{n:[45,10.8,0.4,0,0,0],source:'https://datafood.ch/it/alimento/albume-d-uovo-crudo/',label:'Banca dati svizzera albume',kind:'generico'},
  butter:{n:[758,0.8,1.1,83.4,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/190010',label:'CREA burro',kind:'generico'},
- cocoa:{n:[355,20.4,11.5,25.6,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/508010',label:'CREA cacao amaro (non etichetta Selex)',kind:'generico'},
+ cocoa:{n:[380,22.4,11.6,20.6,12.4,29.5],source:'https://datafood.ch/it/alimento/cacao-in-polvere-senza-zucchero/',label:'Banca dati svizzera cacao amaro (non etichetta Selex)',kind:'generico'},
  sugar:{n:[392,0,100,0,0,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/201500',label:'CREA zucchero',kind:'generico'},
- starch:{n:[328,0.3,null,null,null,null],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/000300',label:'CREA amido di mais',kind:'generico'},
- olive:{n:[899,0,0,99.9,null,0],source:'https://www.alimentinutrizione.it/tabelle-nutrizionali/009210',label:'CREA olio extravergine (tipo olio da confermare)',kind:'riferimento'},
+ starch:{n:[354,0.3,88,0,0,0.6],source:'https://datafood.ch/it/alimento/fecola-di-mais/',label:'Banca dati svizzera amido di mais',kind:'generico'},
+ olive:{n:[900,0,0,100,11.9,0],source:'https://datafood.ch/it/alimento/olio-d-oliva/',label:'Banca dati svizzera olio oliva (tipo olio da confermare)',kind:'riferimento'},
  water:{n:[0,0,0,0,0,0],source:'',label:'Acqua',kind:'composizione'},
  salt:{n:[0,0,0,0,0,0],source:'',label:'Sale',kind:'composizione'}
 };
 function nutritionReference(name){
  const n=String(name).toLowerCase();
  let key=null;
- if(n.includes('yogurt greco delta'))key='greek';
+ if(n.includes('milk pro'))key='milkpro';
+ else if(n.includes('yogurt greco delta'))key='greek';
  else if(n.includes('yogurt greco'))key='greek';
  else if(n.includes('whey bulk'))key='whey';
  else if(n.includes('soia secca')||n.includes('soia testurizzata'))key='soy';
@@ -127,9 +129,13 @@ function nutritionReference(name){
 function applyReferenceNutrition(rs){
  let changed=false;
  for(const r of rs)for(const i of (r.ingredients||[])){
-   if(i.nutrition)continue; // mai sovrascrivere valori messi dall'utente
+   // Solo le voci inserite automaticamente possono essere riallineate.
+   if(i.nutrition && !i.nutritionKind)continue;
    const ref=nutritionReference(i.name);
-   if(ref){i.nutrition=ref.nutrition;i.nutritionSource=ref.source;i.nutritionLabel=ref.label;i.nutritionKind=ref.kind;changed=true}
+   if(ref){
+    if(i.nutrition && JSON.stringify(i.nutrition)===JSON.stringify(ref.nutrition) && i.nutritionSource===ref.source)continue;
+    i.nutrition=ref.nutrition;i.nutritionSource=ref.source;i.nutritionLabel=ref.label;i.nutritionKind=ref.kind;changed=true
+   }
  }
  return changed;
 }
@@ -187,7 +193,7 @@ function modal(title,subtitle,body,onSave){const o=document.createElement('div')
 const field=(name,label,value='',type='text',extra='')=>`<label class="field">${esc(label)}<input name="${esc(name)}" type="${type}" value="${esc(value??'')}" ${extra}></label>`;
 const num=(v)=>v===''?null:Number(String(v).replace(',','.'));
 function editIngredient(i){const isNew=!i;const ref=i||ing('',null);const nutr=ref.nutrition||{};const body=`${field('name','Ingrediente',ref.name,'text','required') }<div class="edit-grid">${field('qty','Quantità',ref.qty,'number','min="0" step="any"')}${`<label class="field">Unità<select name="unit">${['g','ml','pz','q.b.'].map(u=>`<option ${ref.unit===u?'selected':''}>${u}</option>`).join('')}</select></label>`}</div><details><summary style="cursor:pointer;font-weight:700;padding:12px 0">Valori nutrizionali per 100 g (facoltativi)</summary><p class="note">Inserisci solo i valori verificati dall’etichetta o da una fonte attendibile. Per il calcolo automatico servono tutti e sei.</p><div class="edit-grid">${nutrientKeys.map(([k,label])=>field('n_'+k,label,nutr[k]??'','number','min="0" step="any"')).join('')}</div></details>${!isNew?'<button class="btn red" type="button" id="removeIng">Rimuovi ingrediente</button>':''}`;
-const m=modal(isNew?'Nuovo ingrediente':'Modifica ingrediente','Le quantità aggiornate vengono salvate.',body,o=>{if(!o.name.trim())return false;if(o.qty!==''&&(!Number.isFinite(num(o.qty))||num(o.qty)<0))return false;const n=Object.fromEntries(nutrientKeys.map(([k])=>[k,num(o['n_'+k])]));const hasAny=nutrientKeys.some(([k])=>o['n_'+k]!==''),all=nutrientKeys.every(([k])=>o['n_'+k]!==''&&Number.isFinite(n[k])&&n[k]>=0);if(hasAny&&!all){alert('Per evitare calcoli incompleti, compila tutti e sei i valori nutrizionali oppure lasciali tutti vuoti.');return false}Object.assign(ref,{name:o.name.trim(),qty:num(o.qty),unit:o.unit,nutrition:all?n:null});if(isNew)getRecipe().ingredients.push(ref)});
+const m=modal(isNew?'Nuovo ingrediente':'Modifica ingrediente','Le quantità aggiornate vengono salvate.',body,o=>{if(!o.name.trim())return false;if(o.qty!==''&&(!Number.isFinite(num(o.qty))||num(o.qty)<0))return false;const n=Object.fromEntries(nutrientKeys.map(([k])=>[k,num(o['n_'+k])]));const hasAny=nutrientKeys.some(([k])=>o['n_'+k]!==''),all=nutrientKeys.every(([k])=>o['n_'+k]!==''&&Number.isFinite(n[k])&&n[k]>=0);if(hasAny&&!all){alert('Per evitare calcoli incompleti, compila tutti e sei i valori nutrizionali oppure lasciali tutti vuoti.');return false}Object.assign(ref,{name:o.name.trim(),qty:num(o.qty),unit:o.unit,nutrition:all?n:null});delete ref.nutritionKind;delete ref.nutritionSource;delete ref.nutritionLabel;if(isNew)getRecipe().ingredients.push(ref)});
 if(!isNew)m.querySelector('#removeIng').onclick=()=>{if(confirm(`Rimuovere ${ref.name}?`)){getRecipe().ingredients=getRecipe().ingredients.filter(x=>x.id!==ref.id);save();m.remove();render()}};
 }
 function editMeta(isNew){const r=isNew?{name:'',category:category,description:'',status:'Da completare'}:getRecipe();const b=`${field('name','Nome ricetta',r.name,'text','required')}<label class="field">Categoria<select name="category"><option value="dolce" ${r.category==='dolce'?'selected':''}>Dolce</option><option value="salato" ${r.category==='salato'?'selected':''}>Salato</option></select></label>${field('description','Descrizione',r.description)}<label class="field">Stato<select name="status">${['Ricetta trascritta','Da verificare','Da completare','Ricetta confermata'].map(s=>`<option ${r.status===s?'selected':''}>${s}</option>`).join('')}</select></label>`;modal(isNew?'Nuova ricetta':'Modifica ricetta','',b,o=>{if(!o.name.trim())return false;if(isNew){r.id=createId();r.ingredients=[];r.steps='';r.cookedWeight=null;recipes.push(r);selected=r.id}else{category=o.category}Object.assign(r,{name:o.name.trim(),category:o.category,description:o.description,status:o.status})})}
